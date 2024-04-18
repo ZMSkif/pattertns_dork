@@ -1,62 +1,46 @@
 import itertools
 
 def generate_patterns():
-    patterns = []
+    patterns = set()
 
     params = ['(KW)', '(DE)', '(PT)', '(PP)', '(PF)']
     symbols = {
-        '(KW)': [' / '],# параметр (KW) search keywords
-        '(DE)': [' / '], # параметр (DE) добавляем site:
-        '(PF)': [' / ', '.'], # параметр (PF) name page
-        '(PT)': ['/ ', '?'], # параметр (PT) тип файла страницы
-        '(PP)': ['= /', '='], # параметр (PP) Типы страниц, которые указывают на категорию или класс страницы  id= ....
+        '(KW)': [' / '],  # Слэш после параметра intext:
+        '(DE)': [' / '],  # Слэш после параметра site:
+        '(PF)': [' / ', '.'],  # Слэш или точка после (PF)
+        '(PT)': [' / ', '?', '? / '],  # Слэш, вопросительный знак, или их комбинация после (PT)
+        '(PP)': ['= '],  # Равно после (PP)
     }
 
-    # Создание всех возможных комбинаций шаблонов
-    for num_params in range(2, 5):  # Ограничение до 4 параметров
+    for num_params in range(2, 5):  # От 2 до 4 параметров
         for param_set in itertools.permutations(params, num_params):
             for symbol_set in itertools.product(*(symbols[param] for param in param_set)):
                 pattern = []
-                for i, (param, symbol) in enumerate(zip(param_set, symbol_set)):
-                    if len(pattern) > 0:
-                        # Если параметр (KW) и он первый, добавляем intext:
-                        if param == '(KW)' and i == 0:
-                            pattern.append(f'intext:{param}')
-                        # Если параметр (KW), но не первый, добавляем в двойные кавычки
-                        elif param == '(KW)':
-                            pattern.append(f'"{param}"')
-                        # Если параметр (DE) и он первый, добавляем site:
-                        elif param == '(DE)':
-                            pattern.append(f'site:.{param}')
-                        else:
-                            pattern.append(f'{symbol}{param}')
-                    else:
-                        # Если первый параметр (KW), добавляем intext:
-                        if param == '(KW)':
-                            pattern.append(f'intext:{param}')
-                        # Всегда добавляем site: перед первым параметром (DE)
-                        elif param == '(DE)'  and i == 0:
-                            pattern.append(f'site:{param}')
-                        else:
-                            pattern.append(f'{param}')
+                for param, symbol in zip(param_set, symbol_set):
+                    entry = f'{param}'  # По умолчанию параметр без модификатора
+                    if param == '(KW)':
+                        entry = f'intext:{param}'
+                    elif param == '(DE)':
+                        entry = f'site:{param}'
 
+                    pattern.append(entry)  # Добавляем параметр
+                    pattern.append(symbol)  # Добавляем символ после параметра
 
-                # Если (PP) в конце, добавляем знак "=" или "=*"
-                if param_set[-1] == '(PP)':
-                    pattern.append('=')
-                patterns.append(''.join(pattern))
+                # Проверяем, должен ли последний символ быть удалён
+                # Удаляем его только если это символ, несущий разделительную функцию, и он находится в конце
+                if pattern[-1].strip() == '/':
+                    pattern.pop()
+
+                patterns.add(''.join(pattern))
 
     return patterns
 
-
 def save_patterns_to_file(patterns, filename):
     with open(filename, 'w') as f:
-        for pattern in patterns:
+        for pattern in sorted(patterns):  # Сортировка для последовательности в файле
             f.write(pattern + '\n')
     print(f"Patterns saved to {filename}")
 
-# Генерация шаблонов
+# Генерация и сохранение шаблонов
 patterns = generate_patterns()
-
-# Сохранение шаблонов в файл
 save_patterns_to_file(patterns, "patterns.txt")
